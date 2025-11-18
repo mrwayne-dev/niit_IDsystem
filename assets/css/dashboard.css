@@ -1,18 +1,19 @@
 :root {
   --White: #ffffff;
-  --Primary: #386641;
-  --Primary-Hover: #2f5336;
-  --Accent: #CADEDE;
-  --Bg: #FEFAE0;
-  --Surface: #ffffff;
-  --Surface-Alt: #9FB8B8;
-  --Black: #1C2628;
-  --GrayDark: #6B7C7D;
-  --Gray: #9FB8B8;
-  --Gainsboro: #FEFAE0;
+  --Primary: #0B73CF;         
+  --Primary-Hover: #084B95;      
+  --Accent: #8CC8FF;             
+  --Bg: #F5F7FA;                 
+  --Surface: #ffffff;            
+  --Surface-Alt: #E3E7EB;        
+  --Black: #1C2628;              
+  --GrayDark: #4A4F55;           
+  --Gray: #9FA8B3;               
+  --Gainsboro: #F5F7FA;          
   --LightGray: rgba(28, 38, 40, 0.1);
-  --Green: #386641;
+  --Green: #0B73CF; 
 }
+
 
 /* Reset Browsers
 -------------------------------------------------------------- */

@@ -1,0 +1,183 @@
+/* ---------------------------------
+   NIIT Color Scheme (Updated)
+---------------------------------- */
+:root {
+    --Primary: #0B73CF;
+    --Primary-Dark: #084B95;
+    --Accent: #8CC8FF;
+    --White: #ffffff;
+    --Gray: #9FA8B3;
+    --GrayDark: #4A4F55;
+    --Border: #d1d5db;
+    --Black: #1C2628;
+}
+.sign-in-box .right {
+    padding-top: 40px !important;
+}
+
+/* ---------------------------------
+   ID Card Container
+---------------------------------- */
+.id-card {
+    width: 420px !important;
+    background: var(--White);
+    padding: 20px;
+    border-radius: 14px;
+    border: 1px solid var(--Border);
+    transform: scale(1);
+}
+
+/* ---------------------------------
+   Header
+---------------------------------- */
+.id-header {
+    background: var(--Primary);
+    color: var(--White);
+    font-size: 22px;
+    padding: 10px 0;
+    border-radius: 10px 10px 0 0;
+    font-weight: 700;
+    text-align: center;
+}
+
+.niit-bold {
+    font-weight: 900;
+    font-size: 26px;
+}
+
+.niit-location {
+    font-weight: 500;
+    font-size: 22px;
+}
+
+/* ---------------------------------
+   Subheader (center it!)
+---------------------------------- */
+.id-subheader {
+    color: var(--Primary);
+    font-weight: 700;
+    margin-top: 6px;
+    font-size: 16px;
+    text-align: center;
+}
+
+/* ---------------------------------
+   Expiry (Left) + Photo (Center)
+---------------------------------- */
+
+.photo-row {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr; 
+    align-items: center;
+    margin-top: 10px;
+}
+
+.id-expiry {
+    justify-self: start;
+}
+
+.photo-center {
+    justify-self: center;
+}
+
+.rotate-text {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    font-weight: bold;
+    color: var(--Black);
+    font-size: 1.1rem;
+    text-align: center;
+}
+
+.id-photo {
+    width: 170px;
+    height: 200px;
+    border: 1px solid var(--Gray);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0;
+}
+
+.id-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* ---------------------------------
+   Name (centered)
+---------------------------------- */
+.id-name {
+    font-weight: 900;
+    font-size: 18px;
+    margin-top: 10px;
+    text-align: center;
+    width: 100%;
+}
+
+/* ---------------------------------
+   Signature
+---------------------------------- */
+.id-signature-box {
+    text-align: center;
+    margin-top: 5px;
+}
+
+.signature-img {
+    width: 120px;
+    height: auto;
+}
+
+.signature-label {
+    font-size: 13px;
+    margin-top: -5px;
+    font-style: italic;
+}
+
+/* ---------------------------------
+   Info Blocks
+---------------------------------- */
+.id-info-block {
+    background: var(--Primary);
+    color: var(--White);
+    padding: 8px 12px;
+    margin-top: 10px;
+    border-radius: 5px;
+    font-size: 15px;
+    display: flex;
+    justify-content: space-between;
+}
+
+/* ---------------------------------
+   Footer
+---------------------------------- */
+.footer-stamp {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem 0;
+  background-color: var(--Border);
+  text-align: center;
+}
+
+.footer-stamp span {
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  color: var(--Black);
+  font-family: 'Host Grotesk', sans-serif;
+  line-height: 1;
+  user-select: none;
+}
+
+/* Make link consistent with the design */
+.footer-stamp a {
+  color: var(--Primary);       /* NIIT blue */
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.footer-stamp a:hover {
+  text-decoration: underline;
+}
