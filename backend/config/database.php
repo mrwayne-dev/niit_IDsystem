@@ -1,5 +1,4 @@
 <?php
-// database.php
 $host = "localhost";
 $dbname = "niit_digitalID";
 $username = "root";      

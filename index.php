@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- Meta -->
     <meta charset="UTF-8">
     <meta name="description" content="HealthRunCare Charity - Support health initiatives through donations and community contributions.">
     <meta name="author" content="HealthRunCare">
@@ -13,7 +12,6 @@
     <link rel="stylesheet" href="assets/css/bootstrap.css">
     <link rel="stylesheet" href="assets/css/dashboard.css">
     <link rel="stylesheet" href="assets/css/style.css">
-    
 </head>
 
 <body style="background-color: white;">
@@ -31,73 +29,58 @@
                             <div class="sign-in-inner">
                                 <form id="create-id-form" class="form-login flex flex-column gap24" autocomplete="off" enctype="multipart/form-data">
 
-                                    <!-- firstname-->
                                     <fieldset>
                                         <div class="f14-regular mb-6">First Name</div>
                                         <input class="flex-grow form-control" type="text" name="first_name" placeholder="John" required>
                                     </fieldset>
 
-                                    <!-- lastname -->
                                     <fieldset>
                                         <div class="f14-regular mb-6">Last Name</div>
                                         <input class="flex-grow form-control" type="text" name="last_name" placeholder="Doe" required>
                                     </fieldset>
 
-                                    <!-- studentID -->
                                     <fieldset>
                                         <div class="f14-regular mb-6">Student ID</div>
                                         <input class="flex-grow form-control" type="text" name="student_id" placeholder="NIIT12345" required>
                                     </fieldset>
 
-                                    <!-- semestercode -->
                                     <fieldset>
                                         <div class="f14-regular mb-6">Semester Code</div>
                                         <input class="flex-grow form-control" type="text" name="semester_code" placeholder="SEM-2025A" required>
                                     </fieldset>
 
-                                    <!-- batchcode -->
                                     <fieldset>
                                         <div class="f14-regular mb-6">Batch Code</div>
                                         <input class="flex-grow form-control" type="text" name="batch_code" placeholder="BCH-21" required>
                                     </fieldset>
 
-                                    <!-- course -->
                                     <fieldset>
                                         <div class="f14-regular mb-6">Course</div>
                                         <input class="flex-grow form-control" type="text" name="course" placeholder="Software Engineering" required>
                                     </fieldset>
 
-                                    <!-- duration -->
                                     <fieldset>
                                         <div class="f14-regular mb-6">Duration</div>
                                         <input class="flex-grow form-control" type="text" name="duration" placeholder="6 Months" required>
                                     </fieldset>
 
-                                    <!-- expirydate -->
                                     <fieldset>
                                         <div class="f14-regular mb-6">Expiry Date</div>
                                         <input class="flex-grow form-control" type="date" name="expiry_date" required>
                                     </fieldset>
 
-                                    <!-- passportupload -->
                                     <fieldset>
                                         <div class="f14-regular mb-6">Profile Photo</div>
                                         <input class="form-control" type="file" name="photo" accept="image/*" required>
                                     </fieldset>
 
-                                    <!-- signatureuplload-->
                                     <fieldset>
                                         <div class="f14-regular mb-6">Signature</div>
                                         <input class="form-control" type="file" name="signature" accept="image/*">
                                     </fieldset>
 
-                                    <!-- submit buttons -->
-                                    <button type="button" id="preview-btn" class="tf-button style-1 label-01 w-100 bg-Primary text-White">
-                                        Preview ID Card
-                                    </button>
-
-                                    <button type="button" id="download-btn" class="tf-button style-1 label-01 w-100 bg-Gray disabled" disabled>
-                                        Download PDF
+                                    <button type="button" id="process-btn" class="tf-button style-1 label-01 w-100 bg-Primary text-White">
+                                        Generate ID Card
                                     </button>
 
                                 </form>
@@ -105,11 +88,10 @@
                         </div>
                     </div>
 
-                    <!-- RIGHT SIDE -->
                     <div class="right d-flex justify-content-center align-items-start">
+                    <div class="preview-wrapper flex-column gap-4" style="display: flex; flex-direction: column; gap: 30px;">
+                        
                         <div id="id-card-preview" class="id-card shadow-sm">
-
-                            <!-- Header -->
                             <div class="id-header text-center">
                                 <span class="niit-bold">NIIT</span>
                                 <span class="niit-location">Port Harcourt</span>
@@ -117,67 +99,78 @@
 
                             <div class="id-subheader text-center">STUDENT IDENTITY CARD</div>
 
-                            <!-- Photo + Expiry -->
-                          <div class="photo-row">
-                            <div class="id-expiry">
-                                <div class="rotate-text">
-                                    Expiry Date: <span id="preview-expiry">DEC, 2027</span>
+                            <div class="photo-row">
+                                <div class="id-expiry">
+                                    <div class="rotate-text">
+                                        Expiry Date: <span id="preview-expiry">DEC, 2027</span>
+                                    </div>
+                                </div>
+
+                                <div class="photo-center">
+                                    <div class="id-photo">
+                                        <img id="preview-photo" src="assets/img/placeholder.png" alt="Profile">
+                                    </div>
                                 </div>
                             </div>
 
-                            <!-- Photo Center -->
-                            <div class="photo-center">
-                                <div class="id-photo">
-                                    <img id="preview-photo" src="assets/img/placeholder.png" alt="Profile">
-                                </div>
-                            </div>
-
-                        </div>
-
-
-
-                            <!-- Full Name -->
                             <div class="id-name text-center mt-2" id="preview-fullname">JOHN DOE</div>
 
-                            <!-- Signature -->
                             <div class="id-signature-box">  
                                 <img id="preview-signature" src="" class="signature-img">
                                 <div class="signature-label">Holder's Signature</div>
                             </div>
 
-                            <!-- Info Blocks -->
                             <div class="id-info-block"><b>STUDENT ID:</b> <span id="preview-studentid">NIIT12345</span></div>
                             <div class="id-info-block"><b>Semester Code:</b> <span id="preview-semester">SEM-2025A</span></div>
                             <div class="id-info-block"><b>Batch Code:</b> <span id="preview-batch">BCH-21</span></div>
                             <div class="id-info-block"><b>Course:</b> <span id="preview-course">Software Engineering</span></div>
                             <div class="id-info-block"><b>Duration:</b> <span id="preview-duration">6 Months</span></div>
-
                         </div>
+
+                        <div id="id-card-back-preview" class="id-card shadow-sm">
+                            <div class="back-content">
+                                <div class="disclaimer-section">
+                                    <p>This card is issued for identification of the holder whose name, photograph and signature appear on the reverse side.</p>
+                                    <p>This card is NIIT Port Harcourt property and remains valid for the period stated overleaf.</p>
+                                </div>
+
+                                <div class="address-section">
+                                    <h4 class="address-title">NIIT Education & Training Centre</h4>
+                                    <p>
+                                        1, Kaduna Street, D/Line,<br>
+                                        Port Harcourt, Rivers State.<br>
+                                        Tel/Fax: 234-084-230997
+                                    </p>
+                                </div>
+
+                                <div class="auth-signatory-section">
+                                    <img src="assets/img/auth_signature_placeholder.png" alt="Auth Signature" class="auth-sig-img">
+                                    <div class="auth-label">Authorized Signatory</div>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
-
-
                 </div>
             </div>
         </div>
     </div>
+    </div>
 
     <div class="footer-stamp" aria-hidden="true">
-    <span>Powered by <a href="https://lymora.tech" target="_blank">Lymora</a></span>
-</div>
-
+        <span>Powered by <a href="https://lymora.tech" target="_blank">Lymora</a></span>
+    </div>
 
     <div id="loader" class="hidden">
-    <div class="line-loader">
-        <div></div><div></div><div></div><div></div><div></div>
+        <div class="line-loader">
+            <div></div><div></div><div></div><div></div><div></div>
+        </div>
     </div>
-    </div>
-    <!-- Toast Notifications -->
     <div id="toast-container"></div>
 
-
-    <!-- Scripts -->
-    <script src="../../assets/js/api.js" defer></script>
-    <!-- Iconify CDN -->
+    <script src="assets/js/ui.js"></script>
+    <script src="assets/js/verify.js"></script>
+    <script src="assets/js/create.js"></script> 
     <script src="https://code.iconify.design/3/3.1.1/iconify.min.js"></script>
 
 </body>

@@ -101,8 +101,7 @@
 
 .id-photo img {
     width: 100%;
-    height: 100%;
-    object-fit: cover;
+    object-fit: contain;
 }
 
 /* ---------------------------------
@@ -125,13 +124,21 @@
 }
 
 .signature-img {
-    width: 120px;
-    height: auto;
+    width: 120px; 
+    max-width: 120px !important; 
+    max-height: 50px !important; 
+    height: auto !important;
+    display: block;
+    object-fit: contain !important; 
+    object-position: center;
+    image-rendering: crisp-edges;
+    padding: 0;
+    margin: 0 auto 0 auto; 
 }
 
 .signature-label {
     font-size: 13px;
-    margin-top: -5px;
+    margin-top: 10px;
     font-style: italic;
 }
 
@@ -147,6 +154,75 @@
     font-size: 15px;
     display: flex;
     justify-content: space-between;
+}
+
+/* ---------------------------------
+   Back of Card Styling
+---------------------------------- */
+#id-card-back-preview {
+    background-color: #fdfdfd; 
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 550px; 
+}
+
+.back-content {
+    padding: 10px 15px;
+    color: #333;
+    font-family: 'Arial', sans-serif; 
+}
+
+.disclaimer-section p {
+    font-size: 15px;
+    line-height: 1.4;
+    margin-bottom: 15px;
+    color: #444;
+}
+
+.address-section {
+    margin-top: 25px;
+}
+
+.address-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.address-section p {
+    font-size: 15px;
+    line-height: 1.4;
+    color: #333;
+}
+
+/* Authorized Signatory Section */
+.auth-signatory-section {
+    margin-top: 40px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.auth-sig-img {
+    width: 60px !important; 
+    height: auto !important; 
+    display: block;
+    object-fit: contain !important;
+    object-position: center;
+    image-rendering: crisp-edges;
+    padding: 0;
+    margin: 0 auto 6px auto;  
+}
+
+
+
+.auth-label {
+    font-size: 14px;
+    color: #333;
 }
 
 /* ---------------------------------
@@ -171,13 +247,302 @@
   user-select: none;
 }
 
-/* Make link consistent with the design */
+
 .footer-stamp a {
-  color: var(--Primary);       /* NIIT blue */
+  color: var(--Primary);       
   text-decoration: none;
   font-weight: 700;
 }
 
 .footer-stamp a:hover {
   text-decoration: underline;
+}
+
+/* ==============================
+   Toast Container 
+   ============================== */
+#toast-container {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 13000;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  pointer-events: none;
+}
+
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 280px;
+  max-width: 360px;
+  padding: 14px 18px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+  animation: slideIn 0.4s ease forwards, fadeOut 0.4s ease 3.6s forwards;
+  background: var(--Black);
+  pointer-events: auto;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Accent bar */
+.toast::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 5px;
+  border-top-left-radius: 10px;
+  border-bottom-left-radius: 10px;
+}
+
+/* Toast types */
+.toast.success {
+  background: #1b5e20;
+}
+.toast.success::before {
+  background: #66bb6a;
+}
+
+.toast.error {
+  background: #b71c1c;
+}
+.toast.error::before {
+  background: #ef5350;
+}
+
+.toast.info {
+  background: #1565c0;
+}
+.toast.info::before {
+  background: #42a5f5;
+}
+
+.toast.warning {
+  background: #f57f17;
+}
+.toast.warning::before {
+  background: #ffca28;
+}
+
+/* Icon */
+.toast .iconify {
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+/* Message */
+.toast-message {
+  flex: 1;
+  line-height: 1.4;
+}
+
+/* Animations */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-15px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes fadeOut {
+  to {
+    opacity: 0;
+    transform: translateY(-15px);
+  }
+}
+
+/* ==============================
+   Loader 
+   ============================== */
+#loader {
+  position: fixed;
+  inset: 0;
+  background: rgba(12, 12, 22, 0.6);
+  backdrop-filter: blur(6px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 12000;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+#loader.hidden {
+  display: none !important;
+}
+
+#loader.fade-out {
+  opacity: 0;
+  pointer-events: none;
+}
+.line-loader {
+  display: flex;
+  gap: 4px;
+  height: 40px;
+  align-items: flex-end;
+}
+
+.line-loader div {
+  width: 6px;
+  height: 10px;
+  background: var(--Gainsboro); 
+  border-radius: 4px;
+  animation: wave 1s ease-in-out infinite;
+  animation-play-state: running;
+}
+
+.line-loader div:nth-child(2) { animation-delay: 0.1s; }
+.line-loader div:nth-child(3) { animation-delay: 0.2s; }
+.line-loader div:nth-child(4) { animation-delay: 0.3s; }
+.line-loader div:nth-child(5) { animation-delay: 0.4s; }
+
+@keyframes wave {
+  0%, 100% { height: 10px; opacity: 0.6; }
+  50% { height: 30px; opacity: 1; }
+}
+
+/* ==============================
+   Modal Overlay
+============================== */
+
+.custom-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35); /* simple dim overlay */
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 15000;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+
+.custom-modal-overlay.active {
+    display: flex;
+    opacity: 1;
+}
+
+/* ==============================
+   Modal Box (Clean White Card)
+============================== */
+
+.custom-modal-box {
+    width: 92%;
+    max-width: 430px;
+    background: #ffffff;
+    border-radius: 18px;
+    padding: 32px 28px;
+    position: relative;
+
+    /* clean modern shadow like screenshot */
+    box-shadow: 
+        0px 4px 12px rgba(0, 0, 0, 0.08),
+        0px 8px 28px rgba(0, 0, 0, 0.12);
+
+    transform: translateY(30px);
+    opacity: 0;
+    animation: fadeInUp 0.35s ease forwards;
+}
+
+@keyframes fadeInUp {
+    0% {
+        transform: translateY(30px);
+        opacity: 0;
+    }
+    100% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* ==============================
+   Close Button
+============================== */
+
+.btn-close-modal {
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    background: none;
+    border: none;
+    font-size: 22px;
+    cursor: pointer;
+    color: #555;
+}
+
+.btn-close-modal:hover {
+    color: var(--Primary);
+}
+
+/* ==============================
+   Success Icon Circle
+============================== */
+
+.modal-icon-circle {
+    width: 70px;
+    height: 70px;
+    background: #e7f5ff;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0 auto 20px;
+}
+
+.modal-icon-circle .iconify {
+    font-size: 42px;
+    color: var(--Primary);
+}
+
+/* Text */
+.custom-modal-box h3 {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.custom-modal-box p {
+    font-size: 15px;
+    color: var(--GrayDark);
+    margin-bottom: 22px;
+}
+
+.custom-modal-box h3,
+.custom-modal-box p {
+    text-align: center;
+}
+
+/* ==============================
+   Primary Button
+============================== */
+#modal-download-btn {
+    width: 100%;
+    background: var(--Primary);
+    color: #fff;
+    padding: 14px;
+    border-radius: 10px;
+    font-size: 15px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.4s ease-in-out;
+}
+
+#modal-download-btn:hover {
+    background: var(--Primary-Dark);
+    color: var(--Black);
+    border: 2px solid var(--Accent);
 }
