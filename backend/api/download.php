@@ -1,32 +1,65 @@
 <?php
 ob_start();
 
+require_once('../config/security.php');
 require_once('../config/database.php');
 require_once('../config/constants.php');
-require_once('../fpdf/fpdf.php'); 
+require_once('../config/csrf.php');
+require_once('../fpdf/fpdf.php');
+
+use Endroid\QrCode\QrCode;
+use Endroid\QrCode\Writer\PngWriter;
+
+// Load Composer autoloader for QR code
+require_once BASE_PATH . '/vendor/autoload.php';
 
 header('Content-Type: application/json');
-function getFontPath($fontName) {
+
+// Opportunistic temp PDF cleanup (10% of requests)
+if (random_int(1, 10) === 1) {
+    $maxAge = 3600;
+    $now    = time();
+    foreach (glob(PDF_TMP_DIR . '/*.pdf') as $f) {
+        if (is_file($f) && ($now - filemtime($f)) > $maxAge) @unlink($f);
+    }
+}
+
+function getFontPath(string $fontName): string {
     $path = ASSETS_DIR . '/fonts/' . $fontName;
     if (!file_exists($path)) {
-        throw new Exception("System Error: Missing font '$fontName'. Check assets/fonts/");
+        throw new Exception("System Error: Missing font '{$fontName}'. Check assets/fonts/");
     }
     return $path;
 }
 
-function getCenteredX($fontSize, $fontFile, $text, $imgWidth) {
+function getCenteredX(int $fontSize, string $fontFile, string $text, int $imgWidth): int {
     $bbox = imagettfbbox($fontSize, 0, $fontFile, $text);
-    $textWidth = $bbox[2] - $bbox[0];
-    return (int) (($imgWidth - $textWidth) / 2);
+    return (int)(($imgWidth - ($bbox[2] - $bbox[0])) / 2);
 }
 
-function drawRoundedRectangle($im, $x1, $y1, $x2, $y2, $radius, $color) {
+function drawRoundedRectangle($im, int $x1, int $y1, int $x2, int $y2, int $radius, $color): void {
     imagefilledrectangle($im, $x1 + $radius, $y1, $x2 - $radius, $y2, $color);
     imagefilledrectangle($im, $x1, $y1 + $radius, $x2, $y2 - $radius, $color);
     imagefilledarc($im, $x1 + $radius, $y1 + $radius, $radius * 2, $radius * 2, 180, 270, $color, IMG_ARC_PIE);
     imagefilledarc($im, $x2 - $radius, $y1 + $radius, $radius * 2, $radius * 2, 270, 360, $color, IMG_ARC_PIE);
-    imagefilledarc($im, $x1 + $radius, $y2 - $radius, $radius * 2, $radius * 2, 90, 180, $color, IMG_ARC_PIE);
-    imagefilledarc($im, $x2 - $radius, $y2 - $radius, $radius * 2, $radius * 2, 0, 90, $color, IMG_ARC_PIE);
+    imagefilledarc($im, $x1 + $radius, $y2 - $radius, $radius * 2, $radius * 2,  90, 180, $color, IMG_ARC_PIE);
+    imagefilledarc($im, $x2 - $radius, $y2 - $radius, $radius * 2, $radius * 2,   0,  90, $color, IMG_ARC_PIE);
+}
+
+// Safe GD image loader — replaces all @ suppressed calls
+function safeImageCreate(string $path): GdImage|false {
+    if (!file_exists($path)) return false;
+    $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+    try {
+        return match($ext) {
+            'png'         => imagecreatefrompng($path),
+            'jpg', 'jpeg' => imagecreatefromjpeg($path),
+            default       => false,
+        };
+    } catch (Throwable $e) {
+        error_log("GD image load error [{$path}]: " . $e->getMessage());
+        return false;
+    }
 }
 
 $response = [
@@ -37,7 +70,12 @@ $response = [
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
-    ob_clean(); echo json_encode(['message' => 'Invalid request method']); exit;
+    ob_clean(); echo json_encode(['success' => false, 'message' => 'Invalid request method.']); exit;
+}
+
+if (!verify_csrf_token()) {
+    http_response_code(403);
+    ob_clean(); echo json_encode(['success' => false, 'message' => 'Invalid or expired request token.']); exit;
 }
 
 $student_id = strtoupper(trim($_POST['student_id'] ?? ''));
@@ -47,219 +85,200 @@ try {
 
     $stmt = $pdo->prepare("SELECT * FROM students WHERE student_id = ?");
     $stmt->execute([$student_id]);
-    $student = $stmt->fetch(PDO::FETCH_ASSOC);
+    $student = $stmt->fetch();
 
     if (!$student) throw new Exception('Student not found.');
 
-    // directories
-    $outDir = PDF_TMP_DIR; 
-    if (!is_dir($outDir)) mkdir($outDir, 0777, true);
+    $outDir = PDF_TMP_DIR;
+    if (!is_dir($outDir)) mkdir($outDir, 0750, true);
 
-    // font
     $fontBold = getFontPath('HostGrotesk-Bold.ttf');
     $fontReg  = getFontPath('HostGrotesk-Regular.ttf');
-    
-    // filename
-    $safeId = preg_replace('/[^A-Z0-9]/', '', $student['student_id']);
-    $baseName = 'NIIT_' . $safeId;
-    
-    $frontImgPath = "$outDir/{$baseName}_front.png";
-    $backImgPath  = "$outDir/{$baseName}_back.png";
-    
-    // dimensions
-    $width  = 638; 
+    $sigFont  = file_exists(ASSETS_DIR . '/fonts/HostGrotesk-Italic.ttf')
+        ? ASSETS_DIR . '/fonts/HostGrotesk-Italic.ttf'
+        : $fontReg;
+
+    $safeId       = preg_replace('/[^A-Z0-9]/', '', strtoupper($student['student_id']));
+    $baseName     = 'NIIT_' . $safeId;
+    $frontImgPath = "{$outDir}/{$baseName}_front.png";
+    $backImgPath  = "{$outDir}/{$baseName}_back.png";
+
+    $width  = 638;
     $height = 1008;
 
-    // generate front of id card 
-    $front = imagecreatetruecolor($width, $height);
-    $white = imagecolorallocate($front, 255, 255, 255);
-    $blue  = imagecolorallocate($front, 0, 116, 217); 
-    $black = imagecolorallocate($front, 28, 38, 40);
-    $gray  = imagecolorallocate($front, 180, 180, 180);
-    $lightGray = imagecolorallocate($front, 245, 245, 245); 
+    // ─── FRONT CARD ───────────────────────────────────────────────
+    $front     = imagecreatetruecolor($width, $height);
+    $white     = imagecolorallocate($front, 255, 255, 255);
+    $blue      = imagecolorallocate($front, 0, 116, 217);
+    $black     = imagecolorallocate($front, 28, 38, 40);
+    $gray      = imagecolorallocate($front, 180, 180, 180);
 
     imagefill($front, 0, 0, $white);
 
-    // id card header
-    imagefilledrectangle($front, 40, 40, $width-40, 140, $blue); 
-
+    // Header banner
+    imagefilledrectangle($front, 40, 40, $width - 40, 140, $blue);
     $text1 = "NIIT";
     $text2 = "Port Harcourt";
-    $size1 = 48; 
-    $size2 = 26;
-    
-    $box1 = imagettfbbox($size1, 0, $fontBold, $text1);
-    $w1 = $box1[2] - $box1[0];
-    
-    $box2 = imagettfbbox($size2, 0, $fontBold, $text2);
-    $w2 = $box2[2] - $box2[0];
-    
-    $gap = 15;
-    $totalTextW = $w1 + $gap + $w2;
-    
-
-    $startX = ($width - $totalTextW) / 2;
-    $baselineY = 115;
-
-    imagettftext($front, $size1, 0, (int)$startX, $baselineY, $white, $fontBold, $text1);
-    imagettftext($front, $size2, 0, (int)($startX + $w1 + $gap), $baselineY, $white, $fontBold, $text2);
+    $box1  = imagettfbbox(48, 0, $fontBold, $text1);
+    $w1    = $box1[2] - $box1[0];
+    $box2  = imagettfbbox(26, 0, $fontBold, $text2);
+    $w2    = $box2[2] - $box2[0];
+    $gap   = 15;
+    $startX = ($width - ($w1 + $gap + $w2)) / 2;
+    imagettftext($front, 48, 0, (int)$startX,            115, $white, $fontBold, $text1);
+    imagettftext($front, 26, 0, (int)($startX + $w1 + $gap), 115, $white, $fontBold, $text2);
 
     $subText = "STUDENT IDENTITY CARD";
     $x = getCenteredX(20, $fontBold, $subText, $width);
     imagettftext($front, 20, 0, $x, 180, $blue, $fontBold, $subText);
 
-    // id card photo
-    $photoW = 280; 
-    $photoH = 300; 
+    // Photo area
+    $photoW = 280;
+    $photoH = 300;
     $photoX = (int)(($width - $photoW) / 2);
     $photoY = 210;
+    imagerectangle($front, $photoX - 2, $photoY - 2, $photoX + $photoW + 2, $photoY + $photoH + 2, $gray);
 
-    
-    imagerectangle($front, $photoX-2, $photoY-2, $photoX+$photoW+2, $photoY+$photoH+2, $gray);
-    
-    $photoPath = BASE_PATH . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $student['photo']);
-    
-    if (file_exists($photoPath)) {
-        $ext = strtolower(pathinfo($photoPath, PATHINFO_EXTENSION));
-        $photo = null;
-        if($ext == 'png') $photo = @imagecreatefrompng($photoPath);
-        elseif($ext == 'jpg' || $ext == 'jpeg') $photo = @imagecreatefromjpeg($photoPath);
-        
-        if($photo) {
+    // Files now stored as filename only; derive full path from UPLOAD_DIR
+    $photoFile = basename($student['photo'] ?? '');
+    if ($photoFile) {
+        $photoPath = UPLOAD_DIR . DIRECTORY_SEPARATOR . $photoFile;
+        $photo = safeImageCreate($photoPath);
+        if ($photo) {
             imagecopyresampled($front, $photo, $photoX, $photoY, 0, 0, $photoW, $photoH, imagesx($photo), imagesy($photo));
             imagedestroy($photo);
         }
     }
 
-    // expiry date
+    // Expiry date (rotated, left margin)
     $expiryDate = strtoupper(date('M, Y', strtotime($student['expiry_date'])));
-    $expiryText = "Expiry Date: $expiryDate";
-    imagettftext($front, 12, 90, 55, 480, $black, $fontBold, $expiryText);
+    imagettftext($front, 12, 90, 55, 480, $black, $fontBold, "Expiry Date: {$expiryDate}");
 
-    // id card holder name
+    // Full name
     $fullName = strtoupper($student['first_name'] . ' ' . $student['last_name']);
     $x = getCenteredX(28, $fontBold, $fullName, $width);
     imagettftext($front, 28, 0, $x, 560, $black, $fontBold, $fullName);
 
-    // signature image
+    // Signature
     $sigY = 575;
-    $sigPath = BASE_PATH . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $student['signature']);
-    if (!empty($student['signature']) && file_exists($sigPath)) {
-        $sig = @imagecreatefromstring(file_get_contents($sigPath));
-        if($sig) {
+    $sigFile = basename($student['signature'] ?? '');
+    if ($sigFile) {
+        $sigPath = UPLOAD_DIR . DIRECTORY_SEPARATOR . $sigFile;
+        $sig = safeImageCreate($sigPath);
+        if ($sig) {
             $sigW = 180; $sigH = 60;
             $sigX = (int)(($width - $sigW) / 2);
             imagecopyresampled($front, $sig, $sigX, $sigY, 0, 0, $sigW, $sigH, imagesx($sig), imagesy($sig));
             imagedestroy($sig);
         }
     }
-    
-    $sigLabel = "Holder's Signature";
-    $sigFont = file_exists(ASSETS_DIR . '/fonts/HostGrotesk-Italic.ttf') 
-        ? ASSETS_DIR . '/fonts/HostGrotesk-Italic.ttf' 
-        : $fontReg;
-        
-    $x = getCenteredX(14, $sigFont, $sigLabel, $width);
-    imagettftext($front, 14, 0, $x, $sigY + 80, $black, $sigFont, $sigLabel);
+    $x = getCenteredX(14, $sigFont, "Holder's Signature", $width);
+    imagettftext($front, 14, 0, $x, $sigY + 80, $black, $sigFont, "Holder's Signature");
 
-    $y = 680; 
-    $barH = 55; 
-    $gap = 10;
-    $barW = 560; 
-    $barX = (int)(($width - $barW) / 2); 
-
-    $data = [
-        'STUDENT ID:' => $student['student_id'],
+    // Info blocks
+    $y    = 680;
+    $barH = 55;
+    $barW = 560;
+    $barX = (int)(($width - $barW) / 2);
+    $infoData = [
+        'STUDENT ID:'    => $student['student_id'],
         'Semester Code:' => $student['semester_code'],
-        'Batch Code:' => $student['batch_code'],
-        'Course:' => (strlen($student['course']) > 28 ? substr($student['course'],0,28).'..' : $student['course']),
-        'Duration:' => $student['duration']
+        'Batch Code:'    => $student['batch_code'],
+        'Course:'        => (mb_strlen($student['course']) > 28 ? mb_substr($student['course'], 0, 28) . '..' : $student['course']),
+        'Duration:'      => $student['duration'],
     ];
-
-    foreach($data as $label => $val) {
-        drawRoundedRectangle($front, $barX, $y, $barX+$barW, $y+$barH, 8, $blue);
-
-        imagettftext($front, 18, 0, $barX + 20, $y+38, $white, $fontBold, $label);
-
-        $bbox = imagettfbbox(18, 0, $fontBold, $val);
-        $textW = $bbox[2] - $bbox[0];
-        $valX = (int)($barX + $barW - 20 - $textW);
-        imagettftext($front, 18, 0, $valX, $y+38, $white, $fontBold, $val);
-        
-        $y += $barH + $gap;
+    foreach ($infoData as $label => $val) {
+        drawRoundedRectangle($front, $barX, $y, $barX + $barW, $y + $barH, 8, $blue);
+        imagettftext($front, 18, 0, $barX + 20, $y + 38, $white, $fontBold, $label);
+        $bbox  = imagettfbbox(18, 0, $fontBold, $val);
+        $valX  = (int)($barX + $barW - 20 - ($bbox[2] - $bbox[0]));
+        imagettftext($front, 18, 0, $valX, $y + 38, $white, $fontBold, $val);
+        $y += $barH + 10;
     }
 
-    imagerectangle($front, 0, 0, $width-1, $height-1, $gray);
-    
+    imagerectangle($front, 0, 0, $width - 1, $height - 1, $gray);
     imagepng($front, $frontImgPath);
     imagedestroy($front);
 
-
-    // generate back of id card
-    $back = imagecreatetruecolor($width, $height);
+    // ─── BACK CARD ────────────────────────────────────────────────
+    $back  = imagecreatetruecolor($width, $height);
+    $white = imagecolorallocate($back, 255, 255, 255);
+    $black = imagecolorallocate($back, 28, 38, 40);
+    $gray  = imagecolorallocate($back, 180, 180, 180);
     imagefill($back, 0, 0, $white);
-    imagerectangle($back, 0, 0, $width-1, $height-1, $gray);
+    imagerectangle($back, 0, 0, $width - 1, $height - 1, $gray);
 
-    // disclaimer
+    // QR Code — links to verify page
+    $qrContent = 'https://niit-ph.com/verify?id=' . urlencode($student['student_id']);
+    try {
+        $qrResult = (new PngWriter())->write(
+            QrCode::create($qrContent)->setSize(200)->setMargin(8)
+        );
+        $qrTmp = "{$outDir}/qr_{$safeId}.png";
+        $qrResult->saveToFile($qrTmp);
+        $qrImg = safeImageCreate($qrTmp);
+        if ($qrImg) {
+            $qrX = (int)(($width - 200) / 2);
+            imagecopyresampled($back, $qrImg, $qrX, 80, 0, 0, 200, 200, imagesx($qrImg), imagesy($qrImg));
+            imagedestroy($qrImg);
+        }
+        if (file_exists($qrTmp)) unlink($qrTmp);
+        $x = getCenteredX(18, $fontReg, 'Scan to Verify', $width);
+        imagettftext($back, 18, 0, $x, 310, $black, $fontReg, 'Scan to Verify');
+    } catch (Throwable $e) {
+        error_log("QR code generation failed: " . $e->getMessage());
+    }
+
+    // Disclaimer
     $disclaimer = "This card is issued for identification of the holder whose name, photograph and signature appear on the reverse side.\n\nThis card is NIIT Port Harcourt property and remains valid for the period stated overleaf.";
-    $wrapped = wordwrap($disclaimer, 45, "\n"); 
-    $y = 250;
-    foreach(explode("\n", $wrapped) as $line) {
+    $y = 380;
+    foreach (explode("\n", wordwrap($disclaimer, 45, "\n")) as $line) {
         $x = getCenteredX(20, $fontReg, $line, $width);
         imagettftext($back, 20, 0, $x, $y, $black, $fontReg, $line);
         $y += 40;
     }
 
-    // address
-    $y = 600;
+    // Address
+    $y = 700;
     $title = "NIIT Education & Training Centre";
     $x = getCenteredX(24, $fontBold, $title, $width);
     imagettftext($back, 24, 0, $x, $y, $black, $fontBold, $title);
-    
-    $addr = "1, Kaduna Street, D/Line,\nPort Harcourt, Rivers State.\nTel/Fax: 234-084-230997";
     $y += 50;
-    foreach(explode("\n", $addr) as $line) {
+    foreach (explode("\n", "1, Kaduna Street, D/Line,\nPort Harcourt, Rivers State.\nTel/Fax: 234-084-230997") as $line) {
         $x = getCenteredX(20, $fontReg, $line, $width);
         imagettftext($back, 20, 0, $x, $y, $black, $fontReg, $line);
         $y += 40;
     }
 
-    // auth signature
+    // Auth signature
     $authSig = ASSETS_DIR . '/img/auth_signature_placeholder.png';
-    if (file_exists($authSig)) {
-        $sig = @imagecreatefrompng($authSig);
-        if ($sig) {
-            $sigX = (int)(($width - 200) / 2);
-            imagecopyresampled($back, $sig, $sigX, 820, 0, 0, 200, 80, imagesx($sig), imagesy($sig));
-            imagedestroy($sig);
-        }
+    $authImg = safeImageCreate($authSig);
+    if ($authImg) {
+        $sigX = (int)(($width - 200) / 2);
+        imagecopyresampled($back, $authImg, $sigX, 870, 0, 0, 200, 80, imagesx($authImg), imagesy($authImg));
+        imagedestroy($authImg);
     }
-    $text = "Authorized Signatory";
-    $x = getCenteredX(18, $fontReg, $text, $width);
-    imagettftext($back, 18, 0, $x, 930, $black, $fontReg, $text);
+    $x = getCenteredX(18, $fontReg, 'Authorized Signatory', $width);
+    imagettftext($back, 18, 0, $x, 970, $black, $fontReg, 'Authorized Signatory');
 
     imagepng($back, $backImgPath);
     imagedestroy($back);
 
-
-    // generate pdf
+    // ─── PDF ASSEMBLY ─────────────────────────────────────────────
     $pdf = new FPDF('P', 'mm', [54, 86]);
     $pdf->SetAutoPageBreak(false);
-    $pdf->SetMargins(0,0,0);
-
+    $pdf->SetMargins(0, 0, 0);
     $pdf->AddPage();
     $pdf->Image($frontImgPath, 0, 0, 54, 86);
-
     $pdf->AddPage();
     $pdf->Image($backImgPath, 0, 0, 54, 86);
 
     $pdfFileName = 'NIIT_ID_' . $safeId . '.pdf';
-    $pdfPath = $outDir . '/' . $pdfFileName;
-    
+    $pdfPath     = "{$outDir}/{$pdfFileName}";
     $pdf->Output($pdfPath, 'F');
 
-    if(file_exists($frontImgPath)) unlink($frontImgPath);
-    if(file_exists($backImgPath)) unlink($backImgPath);
+    if (file_exists($frontImgPath)) unlink($frontImgPath);
+    if (file_exists($backImgPath))  unlink($backImgPath);
 
     if (file_exists($pdfPath)) {
         $response['success'] = true;
@@ -273,10 +292,10 @@ try {
     $response['message'] = $e->getMessage();
     http_response_code(400);
 } catch (PDOException $e) {
-    $response['message'] = 'Database Error: ' . $e->getMessage();
+    error_log('PDO Error [download.php]: ' . $e->getMessage());
+    $response['message'] = 'A database error occurred. Please try again.';
     http_response_code(500);
 }
 
 ob_clean();
 echo json_encode($response);
-?>

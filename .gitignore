@@ -1,0 +1,6 @@
+.env
+vendor/
+temp_pdfs/*.pdf
+assets/uploads/*
+!assets/uploads/.gitkeep
+private_uploads/

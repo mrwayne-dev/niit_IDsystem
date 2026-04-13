@@ -1,25 +1,26 @@
-// assets/js/create.js
-
 document.addEventListener('DOMContentLoaded', () => {
-    const form = document.getElementById('create-id-form');
-    const processBtn = document.getElementById('process-btn'); 
-    
-    // --- Preview Elements ---
-    const previewFullname = document.getElementById('preview-fullname');
+    const form       = document.getElementById('create-id-form');
+    const processBtn = document.getElementById('process-btn');
+
+    if (!form || !processBtn) return;
+
+    // Preview elements
+    const previewFullname  = document.getElementById('preview-fullname');
     const previewStudentId = document.getElementById('preview-studentid');
-    const previewSemester = document.getElementById('preview-semester');
-    const previewBatch = document.getElementById('preview-batch');
-    const previewCourse = document.getElementById('preview-course');
-    const previewDuration = document.getElementById('preview-duration');
-    const previewExpiry = document.getElementById('preview-expiry');
-    const previewPhoto = document.getElementById('preview-photo');
+    const previewSemester  = document.getElementById('preview-semester');
+    const previewBatch     = document.getElementById('preview-batch');
+    const previewCourse    = document.getElementById('preview-course');
+    const previewDuration  = document.getElementById('preview-duration');
+    const previewExpiry    = document.getElementById('preview-expiry');
+    const previewPhoto     = document.getElementById('preview-photo');
     const previewSignature = document.getElementById('preview-signature');
-    
-    const photoInput = form.querySelector('input[name="photo"]');
+
+    const photoInput     = form.querySelector('input[name="photo"]');
     const signatureInput = form.querySelector('input[name="signature"]');
-    
-    // --- local preview file reader ---
+
+    // Live image preview from file input
     function setupImagePreview(input, imgElement, defaultSrc = '') {
+        if (!input || !imgElement) return;
         input.addEventListener('change', (event) => {
             const file = event.target.files[0];
             if (file) {
@@ -32,45 +33,49 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- live update block ---
-    form.querySelectorAll('input:not([type="file"])').forEach(input => {
+    // Live preview updates on text input
+    form.querySelectorAll('input:not([type="file"]):not([type="hidden"])').forEach(input => {
         input.addEventListener('input', () => {
-            const fieldName = input.name;
             const value = input.value;
-            
-            switch (fieldName) {
+            switch (input.name) {
                 case 'first_name':
-                case 'last_name':
-                    const firstName = form.elements['first_name'].value;
-                    const lastName = form.elements['last_name'].value;
-                    previewFullname.textContent = `${firstName} ${lastName}`.toUpperCase();
+                case 'last_name': {
+                    const fn = form.elements['first_name'].value;
+                    const ln = form.elements['last_name'].value;
+                    previewFullname.textContent = `${fn} ${ln}`.toUpperCase();
                     break;
-                case 'student_id': previewStudentId.textContent = value.toUpperCase(); break;
-                case 'semester_code': previewSemester.textContent = value.toUpperCase(); break;
-                case 'batch_code': previewBatch.textContent = value.toUpperCase(); break;
-                case 'course': previewCourse.textContent = value; break;
-                case 'duration': previewDuration.textContent = value; break;
+                }
+                case 'student_id':    previewStudentId.textContent = value.toUpperCase(); break;
+                case 'semester_code': previewSemester.textContent  = value.toUpperCase(); break;
+                case 'batch_code':    previewBatch.textContent     = value.toUpperCase(); break;
+                case 'course':        previewCourse.textContent    = value; break;
+                case 'duration':      previewDuration.textContent  = value; break;
                 case 'expiry_date':
-                    if (value) {
-                        const date = new Date(value);
-                        previewExpiry.textContent = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }).toUpperCase();
-                    } else {
-                        previewExpiry.textContent = 'N/A';
-                    }
+                    previewExpiry.textContent = value
+                        ? new Date(value + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', year: 'numeric' }).toUpperCase()
+                        : 'N/A';
                     break;
             }
         });
     });
 
-
-    setupImagePreview(photoInput, previewPhoto, 'assets/img/placeholder.png');
+    setupImagePreview(photoInput,     previewPhoto,     'assets/img/placeholder.png');
     setupImagePreview(signatureInput, previewSignature, '');
 
+    function resetPreview() {
+        previewFullname.textContent  = 'JOHN DOE';
+        previewStudentId.textContent = 'NIIT12345';
+        previewSemester.textContent  = 'SEM-2025A';
+        previewBatch.textContent     = 'BCH-21';
+        previewCourse.textContent    = 'Software Engineering';
+        previewDuration.textContent  = '6 Months';
+        previewExpiry.textContent    = 'DEC, 2027';
+        previewPhoto.src             = 'assets/img/placeholder.png';
+        previewSignature.src         = '';
+    }
 
-    // --- save and generate the pdf ---
-    processBtn.addEventListener('click', async (e) => {
-        e.preventDefault(); 
-        
+    // ── Save + Generate PDF ──────────────────────────────────────
+    processBtn.addEventListener('click', async () => {
         if (!form.checkValidity()) {
             form.reportValidity();
             showToast('Please fill out all required fields.', 'error');
@@ -78,46 +83,48 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         showLoader();
-        
-        try {
-            // save data
-            const formData = new FormData(form);
-            const saveUrl = '/backend/api/create_id.php';
 
-            const saveResponse = await fetch(saveUrl, { method: 'POST', body: formData });
-            const saveResult = await saveResponse.json();
+        try {
+            // Step 1: Save student data
+            const formData    = new FormData(form);
+            const saveResponse = await fetch('/backend/api/create_id.php', { method: 'POST', body: formData });
+            const saveResult   = await saveResponse.json();
 
             if (!saveResponse.ok || !saveResult.success) {
-                throw new Error(saveResult.message || 'Database save failed.');
+                throw new Error(saveResult.message || 'Failed to save student details.');
             }
 
-            //generate pdf
             showToast('Details saved. Generating PDF...', 'success');
-            
-            const studentID = form.elements['student_id'].value;
-            const downloadData = new FormData();
-            downloadData.append('student_id', studentID);
-            
-            const downloadUrl = '/backend/api/download.php';
-            const downloadResponse = await fetch(downloadUrl, { method: 'POST', body: downloadData });
-            const downloadResult = await downloadResponse.json();
 
-            if (!downloadResponse.ok || !downloadResult.success) {
-                throw new Error(downloadResult.message || 'PDF Generation failed.');
+            // Step 2: Generate PDF (append CSRF token from form)
+            const csrfToken    = formData.get('csrf_token') || '';
+            const studentId    = form.elements['student_id'].value.toUpperCase();
+            const downloadData = new FormData();
+            downloadData.append('student_id', studentId);
+            downloadData.append('csrf_token', csrfToken);
+
+            const dlResponse = await fetch('/backend/api/download.php', { method: 'POST', body: downloadData });
+            const dlResult   = await dlResponse.json();
+
+            if (!dlResponse.ok || !dlResult.success) {
+                throw new Error(dlResult.message || 'PDF generation failed.');
             }
 
-            // download pdf
+            // Step 3: Trigger download
             showToast('Downloading PDF...', 'success');
-
             const link = document.createElement('a');
-            link.href = downloadResult.pdf_url;
-            link.download = `NIIT_ID_${studentID}.pdf`;
+            link.href     = dlResult.pdf_url;
+            link.download = `NIIT_ID_${studentId}.pdf`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
 
+            // Step 4: Reset form for next entry
+            form.reset();
+            resetPreview();
+            showToast('ID card created successfully!', 'success');
+
         } catch (error) {
-            console.error('Process Error:', error);
             showToast(error.message, 'error');
         } finally {
             hideLoader();

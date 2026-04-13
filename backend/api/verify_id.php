@@ -1,8 +1,11 @@
 <?php
-ob_start(); 
+ob_start();
 
+require_once('../config/security.php');
 require_once('../config/database.php');
 require_once('../config/constants.php');
+require_once('../config/csrf.php');
+require_once('../config/rate_limit.php');
 
 header('Content-Type: application/json');
 
@@ -13,11 +16,17 @@ $response = [
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
-    ob_clean(); echo json_encode(['message' => 'Invalid request method']); exit;
+    ob_clean(); echo json_encode(['success' => false, 'message' => 'Invalid request method.']); exit;
 }
 
+if (!verify_csrf_token()) {
+    http_response_code(403);
+    ob_clean(); echo json_encode(['success' => false, 'message' => 'Invalid or expired request token.']); exit;
+}
+
+check_rate_limit('verify', 5, 60);
+
 try {
-    // validate student details
     if (empty($_POST['first_name']) || empty($_POST['last_name']) || empty($_POST['student_id'])) {
         throw new Exception('All fields (First Name, Last Name, Student ID) are required.');
     }
@@ -26,15 +35,38 @@ try {
     $lastName  = trim($_POST['last_name']);
     $studentId = strtoupper(trim($_POST['student_id']));
 
-    // check db
-    $stmt = $pdo->prepare("SELECT student_id FROM students WHERE student_id = ? AND LOWER(first_name) = LOWER(?) AND LOWER(last_name) = LOWER(?)");
+    $stmt = $pdo->prepare("
+        SELECT student_id, first_name, last_name, other_names,
+               course, semester_code, batch_code, duration, expiry_date
+        FROM students
+        WHERE student_id = ?
+          AND LOWER(first_name) = LOWER(?)
+          AND LOWER(last_name)  = LOWER(?)
+        LIMIT 1
+    ");
     $stmt->execute([$studentId, $firstName, $lastName]);
-    $student = $stmt->fetch(PDO::FETCH_ASSOC);
+    $student = $stmt->fetch();
 
     if ($student) {
-        $response['success'] = true;
-        $response['message'] = 'Student Verified Successfully.';
-        $response['student_id'] = $studentId; 
+        $today     = new DateTimeImmutable('today');
+        $expiryDt  = new DateTimeImmutable($student['expiry_date']);
+        $isExpired = $expiryDt < $today;
+
+        $response['success']    = true;
+        $response['is_expired'] = $isExpired;
+        $response['message']    = $isExpired
+            ? 'Student found but this ID card has expired.'
+            : 'Student Verified Successfully.';
+        $response['student_id'] = htmlspecialchars($student['student_id'], ENT_QUOTES, 'UTF-8');
+        $response['student']    = [
+            'student_id'    => htmlspecialchars($student['student_id'], ENT_QUOTES, 'UTF-8'),
+            'full_name'     => htmlspecialchars($student['first_name'] . ' ' . $student['last_name'], ENT_QUOTES, 'UTF-8'),
+            'course'        => htmlspecialchars($student['course'], ENT_QUOTES, 'UTF-8'),
+            'semester_code' => htmlspecialchars($student['semester_code'], ENT_QUOTES, 'UTF-8'),
+            'batch_code'    => htmlspecialchars($student['batch_code'], ENT_QUOTES, 'UTF-8'),
+            'expiry_date'   => $student['expiry_date'],
+            'is_expired'    => $isExpired,
+        ];
     } else {
         throw new Exception('No record found matching these details. Please check your inputs.');
     }
@@ -43,10 +75,10 @@ try {
     $response['message'] = $e->getMessage();
     http_response_code(400);
 } catch (PDOException $e) {
-    $response['message'] = 'Database Error: ' . $e->getMessage();
+    error_log('PDO Error [verify_id.php]: ' . $e->getMessage());
+    $response['message'] = 'A database error occurred. Please try again.';
     http_response_code(500);
 }
 
 ob_clean();
 echo json_encode($response);
-?>

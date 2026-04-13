@@ -1,28 +1,48 @@
 Options +FollowSymlinks
 RewriteEngine On
 
-# ⚠ Allow direct access to these folders (do NOT rewrite)
-RewriteRule ^(assets|backend|sql|temp_pdfs|vscode)($|/) - [L]
+# ===============================
+# Block direct access to sensitive paths
+# ===============================
+RewriteRule ^sql(/|$)               - [F,L]
+RewriteRule ^backend/config(/|$)    - [F,L]
+RewriteRule ^\.env$                 - [F,L]
+RewriteRule ^\.env\.example$        - [F,L]
+RewriteRule ^composer\.(json|lock)$ - [F,L]
+RewriteRule ^vendor(/|$)            - [F,L]
 
 # ===============================
-# 1. Rewrite / to /index.php
+# Admin routes
+# ===============================
+RewriteRule ^admin/login/?$      admin/login.php      [L]
+RewriteRule ^admin/dashboard/?$  admin/dashboard.php  [L]
+RewriteRule ^admin/logout/?$     admin/logout.php     [L]
+
+# ===============================
+# Allow direct access to these folders (do NOT rewrite)
+# ===============================
+RewriteRule ^(assets|backend|temp_pdfs)($|/) - [L]
+
+# ===============================
+# Rewrite / to index.php
 # ===============================
 RewriteRule ^$ index.php [L]
 
 # ===============================
-# 2. Rewrite /verify to verify.php
+# Rewrite /verify to verify.php
 # ===============================
 RewriteRule ^verify/?$ verify.php [L]
 
 # ===============================
-# 3. Prevent .php exposure (optional but recommended)
+# Prevent .php exposure in URL
 # ===============================
 RewriteCond %{THE_REQUEST} \s/+(.*)\.php[\s?]
 RewriteRule ^ %1 [R=301,L]
 
 # ===============================
-# 4. Enable pretty URLs for only index & verify
+# Pretty URL fallback
 # ===============================
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_URI} !\.(ico|png|jpg|jpeg|gif|svg|css|js|woff|woff2|ttf|eot|map|txt|xml|webmanifest)$
 RewriteRule ^([^/]+)/?$ $1.php [L]

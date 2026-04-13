@@ -610,3 +610,128 @@
         transform: scale(0.75);
     }
 }
+
+/* ---------------------------------
+   Verification Modal — Student Details
+---------------------------------- */
+.expiry-badge {
+    text-align: center;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    margin: 0 auto 16px;
+    display: inline-block;
+}
+.expiry-badge.valid   { background: #e8f5e9; color: #2e7d32; }
+.expiry-badge.expired { background: #ffebee; color: #c62828; }
+.expiry-badge.hidden  { display: none; }
+
+.student-details-grid { margin-bottom: 16px; width: 100%; }
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--Border);
+    font-size: 14px;
+    gap: 12px;
+}
+.detail-row span:first-child { color: var(--GrayDark); flex-shrink: 0; }
+.detail-row span:last-child  { font-weight: 600; text-align: right; word-break: break-word; }
+
+/* ---------------------------------
+   Back Card QR Placeholder (preview)
+---------------------------------- */
+.qr-placeholder-section {
+    text-align: center;
+    padding: 14px 0 8px;
+}
+.qr-box {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 90px;
+    height: 90px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    margin: 0 auto;
+}
+.qr-label {
+    font-size: 11px;
+    color: #888;
+    margin: 4px 0 0;
+}
+
+/* ---------------------------------
+   Dark Mode Toggle Switch
+---------------------------------- */
+.theme-toggle-wrap {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 10000;
+}
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 26px;
+}
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background: #ccc;
+    border-radius: 26px;
+    transition: 0.3s;
+}
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 3px;
+    bottom: 3px;
+    background: #fff;
+    border-radius: 50%;
+    transition: 0.3s;
+}
+input:checked + .slider { background: var(--Primary); }
+input:checked + .slider:before { transform: translateX(24px); }
+
+/* ---------------------------------
+   Dark Mode Theme Overrides
+---------------------------------- */
+[data-theme="dark"] {
+    --Primary:      #4da6ff;
+    --Primary-Dark: #2979d4;
+    --White:        #1e1e2e;
+    --GrayDark:     #b0bec5;
+    --Border:       #2e2e3e;
+    --Black:        #e0e0e0;
+    background-color: #121212 !important;
+    color: #e0e0e0;
+}
+[data-theme="dark"] body { background-color: #121212 !important; }
+[data-theme="dark"] .id-card {
+    background: #1e1e2e;
+    border-color: #2e2e3e;
+    color: #e0e0e0;
+}
+[data-theme="dark"] .id-header { background: var(--Primary-Dark); }
+[data-theme="dark"] .id-info-block { background: var(--Primary-Dark); }
+[data-theme="dark"] .custom-modal-box {
+    background: #1e1e2e;
+    color: #e0e0e0;
+}
+[data-theme="dark"] .form-control {
+    background: #2a2a3e;
+    color: #e0e0e0;
+    border-color: #3e3e5e;
+}
+[data-theme="dark"] .form-control::placeholder { color: #888; }
+[data-theme="dark"] .sign-in-wrap { background: #121212; }
+[data-theme="dark"] .detail-row { border-bottom-color: #2e2e3e; }
+[data-theme="dark"] .expiry-badge.valid   { background: #1b3a1f; color: #81c784; }
+[data-theme="dark"] .expiry-badge.expired { background: #3a1b1b; color: #ef9a9a; }

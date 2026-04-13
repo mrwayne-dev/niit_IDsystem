@@ -1,0 +1,1 @@
+provide a prompt for me to give claude, for it to analyse my website folder and find bugs, issues with the code and how to upgrade it to a max level adding better functionalities and features
